@@ -1,0 +1,33 @@
+{
+    "git": {
+        "commitMessage": "chore: release v${version}",
+        "tagName": "v${version}",
+        "tagAnnotation": "Release v${version}",
+        "requireCleanWorkingDir": true,
+        "requireUpstream": true
+    },
+    "github": {
+        "release": true,
+        "releaseName": "v${version}",
+        "autoGenerate": true
+    },
+    "npm": {
+        "publish": false
+    },
+    "hooks": {
+        "before:init": [
+            "git fetch --tags"
+        ],
+        "before:bump": [
+            "echo 'Bumping version to ${version}'"
+        ],
+        "after:bump": [
+            "python -c \"import re, sys; p='pyproject.toml'; t=open(p).read(); t=re.sub(r'version = \\\"[^\\\"]+\\\"', f'version = \\\"${version}\\\"', t, count=1); open(p,'w').write(t)\"",
+            "python -c \"import re, sys; p='kiku_dist/__init__.py'; t=open(p).read(); t=re.sub(r'__version__ = \\\"[^\\\"]+\\\"', f'__version__ = \\\"${version}\\\"', t); open(p,'w').write(t)\"",
+            "git add pyproject.toml kiku_dist/__init__.py"
+        ],
+        "after:release": [
+            "echo 'Released ${name} v${version} to ${repo.repository}'"
+        ]
+    }
+}

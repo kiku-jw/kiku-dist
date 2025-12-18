@@ -1,0 +1,44 @@
+# KikuAI Distributor Configuration
+# https://kikuai.dev/docs/distributor
+
+name = "my-api"
+version = "0.1.0"
+description = "My awesome API"
+
+[ci]
+primary = "gha"  # gha | gitlab | drone | jenkins
+repo = "kikuai/my-api"
+branch = "main"
+
+[gh_release]
+draft = false
+prerelease = false
+generate_notes = true
+
+[container]
+registry = ["ghcr", "dockerhub"]
+dockerfile = "Dockerfile"
+platforms = ["linux/amd64", "linux/arm64"]
+
+[container.build_args]
+# EXAMPLE = "value"
+
+[docs]
+provider = "mkdocs"  # mkdocs | redoc
+openapi_path = "openapi.yaml"
+deploy_to = "gh-pages"
+
+# PR to directories/awesome-lists
+# [[pr_dirs.targets]]
+# repo = "public-apis/public-apis"
+# category = "Machine Learning"
+# template = "templates/public-apis.md.j2"
+
+[prepare.rapidapi]
+# hub_id = "your-hub-id"
+# pricing_model = "freemium"
+# tags = ["ai", "api", "machine-learning"]
+
+[prepare.producthunt]
+# tagline = "Your product tagline"
+# topics = ["Developer Tools", "Artificial Intelligence"]

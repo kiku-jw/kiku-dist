@@ -1,0 +1,80 @@
+# GitHub Actions - Create PRs to directories/awesome-lists
+# Uses peter-evans/create-pull-request
+
+name: PR Directories
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to submit'
+        required: true
+
+jobs:
+  submit-to-directories:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - repo: public-apis/public-apis
+            template: templates/public-apis.md.j2
+            branch: add-my-api
+          # Add more directories as needed
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.directory.repo }}
+          path: target-repo
+          token: ${{ secrets.GH_TOKEN }}
+      
+      - name: Generate entry
+        run: |
+          pip install jinja2 pyyaml
+          python -c "
+          import yaml
+          from jinja2 import Template
+          from pathlib import Path
+          
+          config = yaml.safe_load(Path('kiku-dist.toml').read_text())
+          template = Template(Path('${{ matrix.directory.template }}').read_text())
+          output = template.render(config=config, version='${{ steps.version.outputs.version }}')
+          print(output)
+          " > entry.md
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          path: target-repo
+          token: ${{ secrets.GH_TOKEN }}
+          commit-message: "Add ${{ github.repository }} API"
+          title: "Add ${{ github.repository }} to list"
+          body: |
+            Automated PR from ${{ github.repository }}
+            
+            Version: ${{ steps.version.outputs.version }}
+            
+            ---
+            Created by [kiku-dist](https://github.com/kikuai/kiku-dist)
+          branch: ${{ matrix.directory.branch }}
+          delete-branch: true

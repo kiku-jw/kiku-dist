@@ -1,0 +1,110 @@
+# Drone CI / Woodpecker CI - Pipeline for kiku-dist
+# All logic is in kiku-dist CLI, this just calls it
+# Compatible with both Drone and Woodpecker
+
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  # Doctor check on PRs and tags
+  - name: doctor
+    image: python:3.11-slim
+    commands:
+      - pip install .
+      - kiku-dist doctor --ci
+    when:
+      event:
+        - pull_request
+        - tag
+
+  # Release (manual, triggered via drone CLI or API)
+  - name: release
+    image: python:3.11
+    environment:
+      GH_TOKEN:
+        from_secret: gh_token
+      BUMP_TYPE:
+        from_secret: bump_type
+    commands:
+      - apt-get update && apt-get install -y git nodejs npm
+      - pip install .
+      - git config user.email "ci@kikuai.dev"
+      - git config user.name "CI Bot"
+      - kiku-dist release ${BUMP_TYPE:-patch}
+    when:
+      event:
+        - custom
+      target:
+        - release
+
+  # Publish GitHub Release
+  - name: publish-gh
+    image: python:3.11
+    environment:
+      GH_TOKEN:
+        from_secret: gh_token
+    commands:
+      - apt-get update && apt-get install -y curl
+      - pip install .
+      # Install gh CLI
+      - curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+      - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+      - apt-get update && apt-get install -y gh
+      - kiku-dist publish --targets gh
+    when:
+      event:
+        - tag
+
+  # Container build - uses Docker in Docker
+  - name: publish-container
+    image: docker:24-dind
+    privileged: true
+    environment:
+      GHCR_TOKEN:
+        from_secret: ghcr_token
+      DOCKERHUB_USERNAME:
+        from_secret: dockerhub_username
+      DOCKERHUB_TOKEN:
+        from_secret: dockerhub_token
+    commands:
+      - apk add --no-cache python3 py3-pip
+      - pip3 install --break-system-packages .
+      # Setup buildx
+      - docker buildx create --use --name builder
+      # Login to registries
+      - echo "$GHCR_TOKEN" | docker login ghcr.io -u "$${DRONE_REPO_OWNER:-$CI_REPO_OWNER}" --password-stdin
+      - |
+        if [ -n "$DOCKERHUB_TOKEN" ]; then
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+        fi
+      - kiku-dist publish --targets container
+    when:
+      event:
+        - tag
+
+  # Documentation deploy
+  - name: publish-docs
+    image: python:3.11
+    environment:
+      GH_TOKEN:
+        from_secret: gh_token
+    commands:
+      - apt-get update && apt-get install -y nodejs npm
+      - pip install . mkdocs-material
+      - kiku-dist publish --targets docs
+    when:
+      event:
+        - tag
+      branch:
+        - main
+
+---
+# Secrets configuration (reference only)
+# Set via: drone secret add --name gh_token --data <token>
+# 
+# Required secrets:
+# - gh_token: GitHub token with repo and packages scope
+# - ghcr_token: Token for GitHub Container Registry (can be same as gh_token)
+# - dockerhub_username: Docker Hub username (optional)
+# - dockerhub_token: Docker Hub token (optional)

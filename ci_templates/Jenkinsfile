@@ -1,0 +1,137 @@
+// Jenkinsfile - Pipeline for kiku-dist
+// All logic is in kiku-dist CLI, this just calls it
+
+pipeline {
+    agent any
+    
+    environment {
+        GH_TOKEN = credentials('gh-token')
+        GHCR_TOKEN = credentials('ghcr-token')
+        DOCKERHUB_CREDS = credentials('dockerhub-creds')
+    }
+    
+    parameters {
+        choice(name: 'BUMP_TYPE', choices: ['patch', 'minor', 'major'], description: 'Version bump type')
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Dry run mode')
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                sh '''
+                    python3 -m pip install --upgrade pip
+                    pip install .
+                '''
+            }
+        }
+        
+        stage('Doctor') {
+            steps {
+                sh 'kiku-dist doctor --ci'
+            }
+        }
+        
+        stage('Release') {
+            when {
+                expression { params.BUMP_TYPE != null }
+                branch 'main'
+            }
+            steps {
+                script {
+                    def dryRunFlag = params.DRY_RUN ? '--dry-run' : ''
+                    sh """
+                        git config user.email "ci@kikuai.dev"
+                        git config user.name "CI Bot"
+                        kiku-dist release ${params.BUMP_TYPE} ${dryRunFlag}
+                    """
+                }
+            }
+        }
+        
+        stage('Publish') {
+            when {
+                anyOf {
+                    buildingTag()
+                    expression { !params.DRY_RUN }
+                }
+            }
+            parallel {
+                stage('GitHub Release') {
+                    steps {
+                        sh '''
+                            # Install gh CLI if not present
+                            if ! command -v gh &> /dev/null; then
+                                curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+                                echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+                                sudo apt-get update && sudo apt-get install -y gh
+                            fi
+                            kiku-dist publish --targets gh
+                        '''
+                    }
+                }
+                
+                stage('Container') {
+                    agent {
+                        docker {
+                            image 'docker:24'
+                            args '-v /var/run/docker.sock:/var/run/docker.sock'
+                        }
+                    }
+                    steps {
+                        sh '''
+                            # Setup buildx
+                            docker buildx create --use --name builder || true
+                            
+                            # Login to registries
+                            echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GIT_AUTHOR_NAME}" --password-stdin
+                            
+                            if [ -n "$DOCKERHUB_CREDS_PSW" ]; then
+                                echo "$DOCKERHUB_CREDS_PSW" | docker login -u "$DOCKERHUB_CREDS_USR" --password-stdin
+                            fi
+                            
+                            kiku-dist publish --targets container
+                        '''
+                    }
+                }
+                
+                stage('Documentation') {
+                    steps {
+                        sh '''
+                            pip install mkdocs-material
+                            kiku-dist publish --targets docs
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
+        }
+    }
+}
+
+/*
+ * Required Jenkins Credentials:
+ * - gh-token: GitHub token (Secret text)
+ * - ghcr-token: GitHub Container Registry token (Secret text)
+ * - dockerhub-creds: Docker Hub credentials (Username with password)
+ *
+ * Required Plugins:
+ * - Pipeline
+ * - Docker Pipeline
+ * - Credentials Binding
+ *
+ * To trigger release manually:
+ * 1. Go to Build with Parameters
+ * 2. Select BUMP_TYPE
+ * 3. Build
+ */

@@ -1,0 +1,49 @@
+# GitHub Actions - Documentation build and deploy
+
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'openapi.yaml'
+      - 'openapi.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          pip install kiku-dist mkdocs-material
+      
+      - name: Install kiku-dist
+        run: pip install .
+      
+      - name: Build and deploy docs
+        run: kiku-dist publish --targets docs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
