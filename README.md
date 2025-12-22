@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-black?style=for-the-badge)](https://github.com/kikuai/kiku-dist)
 [![Python](https://img.shields.io/badge/python-3.11+-black?style=for-the-badge&logo=python)](https://python.org)
-[![License](https://img.shields.io/badge/license-MIT-black?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-black?style=for-the-badge)](LICENSE)
 [![GitHub Actions](https://img.shields.io/badge/CI-Success-black?style=for-the-badge&logo=github-actions)](.github/workflows)
 
 **CLI-first, CI-agnostic release automation for KikuAI API products.**
@@ -128,7 +128,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for deta
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the AGPL-3.0 License. See `LICENSE` for more information.
 
 ---
 

@@ -3,7 +3,6 @@
 import os
 import subprocess
 from dataclasses import dataclass
-from typing import Any
 
 
 @dataclass
@@ -26,11 +25,11 @@ def trigger_github_actions(
         "--repo", repo,
         "--ref", ref,
     ]
-    
+
     if inputs:
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
-    
+
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         if result.returncode == 0:
@@ -58,7 +57,7 @@ def trigger_gitlab_ci(
     gitlab_url: str = "https://gitlab.com",
 ) -> CITriggerResult:
     """Trigger GitLab CI pipeline via API.
-    
+
     Requires GITLAB_TOKEN environment variable.
     """
     token = os.environ.get("GITLAB_TOKEN")
@@ -67,26 +66,27 @@ def trigger_gitlab_ci(
             success=False,
             message="GITLAB_TOKEN not set. Set it with api scope.",
         )
-    
+
     try:
-        import httpx
         import urllib.parse
-        
+
+        import httpx
+
         project_encoded = urllib.parse.quote(project, safe="")
         url = f"{gitlab_url}/api/v4/projects/{project_encoded}/trigger/pipeline"
-        
+
         data = {"ref": ref}
         if variables:
             for key, value in variables.items():
                 data[f"variables[{key}]"] = value
-        
+
         resp = httpx.post(
             url,
             headers={"PRIVATE-TOKEN": token},
             data=data,
             timeout=30,
         )
-        
+
         if resp.status_code in (200, 201):
             pipeline = resp.json()
             return CITriggerResult(
@@ -112,18 +112,18 @@ def trigger_drone_ci(
     drone_server: str | None = None,
 ) -> CITriggerResult:
     """Trigger Drone CI build.
-    
+
     Requires DRONE_TOKEN and optionally DRONE_SERVER environment variables.
     Uses drone CLI if available, otherwise API.
     """
     import shutil
-    
+
     # Try drone CLI first
     if shutil.which("drone"):
         cmd = ["drone", "build", "create", repo]
         if branch:
             cmd.extend(["--branch", branch])
-        
+
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode == 0:
@@ -141,20 +141,20 @@ def trigger_drone_ci(
                 success=False,
                 message=f"Error: {e}",
             )
-    
+
     # Fallback to API
     token = os.environ.get("DRONE_TOKEN")
     server = drone_server or os.environ.get("DRONE_SERVER")
-    
+
     if not token or not server:
         return CITriggerResult(
             success=False,
             message="DRONE_TOKEN and DRONE_SERVER required. Or install drone CLI.",
         )
-    
+
     try:
         import httpx
-        
+
         url = f"{server}/api/repos/{repo}/builds"
         resp = httpx.post(
             url,
@@ -162,7 +162,7 @@ def trigger_drone_ci(
             params={"branch": branch},
             timeout=30,
         )
-        
+
         if resp.status_code in (200, 201):
             build = resp.json()
             return CITriggerResult(
@@ -187,21 +187,21 @@ def trigger_jenkins(
     parameters: dict[str, str] | None = None,
 ) -> CITriggerResult:
     """Trigger Jenkins job.
-    
+
     Requires JENKINS_USER and JENKINS_TOKEN environment variables.
     """
     user = os.environ.get("JENKINS_USER")
     token = os.environ.get("JENKINS_TOKEN")
-    
+
     if not user or not token:
         return CITriggerResult(
             success=False,
             message="JENKINS_USER and JENKINS_TOKEN required.",
         )
-    
+
     try:
         import httpx
-        
+
         # Determine URL - with or without parameters
         if parameters:
             url = f"{job_url}/buildWithParameters"
@@ -218,7 +218,7 @@ def trigger_jenkins(
                 auth=(user, token),
                 timeout=30,
             )
-        
+
         if resp.status_code in (200, 201, 302):
             return CITriggerResult(
                 success=True,
@@ -244,34 +244,34 @@ def get_ci_trigger_help(backend: str) -> str:
   1. Install gh CLI: brew install gh
   2. Authenticate: gh auth login
   3. Ensure workflow has workflow_dispatch trigger
-  
+
   Trigger: kiku-dist ci run --backend gha --workflow release""",
-        
+
         "gitlab": """GitLab CI:
   1. Create token: Settings > Access Tokens > Add (api scope)
   2. Set: export GITLAB_TOKEN=<token>
   3. Ensure pipeline trigger is enabled
-  
+
   Trigger: kiku-dist ci run --backend gitlab""",
-        
+
         "drone": """Drone CI:
   Option A - CLI:
     1. Install: brew install drone-cli
     2. Configure: export DRONE_SERVER=https://drone.example.com
     3. Authenticate: export DRONE_TOKEN=<token>
-    
+
   Option B - API only:
     1. Get token from Drone UI
     2. Set DRONE_SERVER and DRONE_TOKEN
-  
+
   Trigger: kiku-dist ci run --backend drone""",
-        
+
         "jenkins": """Jenkins:
   1. Create API token: User > Configure > API Token > Add
   2. Set: export JENKINS_USER=<username>
   3. Set: export JENKINS_TOKEN=<token>
   4. Note your job URL (e.g. https://jenkins.example.com/job/my-project)
-  
+
   Trigger: kiku-dist ci run --backend jenkins --job-url <url>""",
     }
     return help_text.get(backend, f"Unknown backend: {backend}")

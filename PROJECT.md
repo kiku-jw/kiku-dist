@@ -163,6 +163,5 @@ kiku-dist prepare producthunt     # Launch kit для Product Hunt
 
 ## Ссылки
 
-- Репозиторий: `/Users/nick/myprojects/kiku-dist/`
 - Конфиг пример: `examples/kiku-dist.toml.example`
 - CI templates: `ci_templates/`

@@ -10,7 +10,7 @@ def load_openapi(path: Path) -> dict[str, Any] | None:
     """Load OpenAPI spec from file."""
     if not path.exists():
         return None
-    
+
     try:
         with open(path) as f:
             if path.suffix in (".yaml", ".yml"):
@@ -25,13 +25,13 @@ def load_openapi(path: Path) -> dict[str, Any] | None:
 def validate_openapi(spec: dict[str, Any]) -> list[str]:
     """Validate OpenAPI spec structure. Returns list of errors."""
     errors = []
-    
+
     # Check required fields
     if "openapi" not in spec:
         errors.append("Missing 'openapi' version field")
     elif not spec["openapi"].startswith("3."):
         errors.append(f"Unsupported OpenAPI version: {spec['openapi']}. Use 3.x")
-    
+
     if "info" not in spec:
         errors.append("Missing 'info' section")
     else:
@@ -40,12 +40,12 @@ def validate_openapi(spec: dict[str, Any]) -> list[str]:
             errors.append("Missing info.title")
         if "version" not in info:
             errors.append("Missing info.version")
-    
+
     if "paths" not in spec:
         errors.append("Missing 'paths' section")
     elif not spec["paths"]:
         errors.append("'paths' section is empty")
-    
+
     return errors
 
 
@@ -53,7 +53,7 @@ def extract_api_info(spec: dict[str, Any]) -> dict[str, Any]:
     """Extract key information from OpenAPI spec."""
     info = spec.get("info", {})
     paths = spec.get("paths", {})
-    
+
     # Count endpoints
     endpoint_count = 0
     methods = set()
@@ -62,7 +62,7 @@ def extract_api_info(spec: dict[str, Any]) -> dict[str, Any]:
             if method in ("get", "post", "put", "patch", "delete", "options", "head"):
                 endpoint_count += 1
                 methods.add(method.upper())
-    
+
     # Extract tags
     tags = set()
     for path, operations in paths.items():
@@ -70,7 +70,7 @@ def extract_api_info(spec: dict[str, Any]) -> dict[str, Any]:
             if isinstance(details, dict):
                 for tag in details.get("tags", []):
                     tags.add(tag)
-    
+
     return {
         "title": info.get("title", "Unknown API"),
         "version": info.get("version", "0.0.0"),
@@ -86,7 +86,7 @@ def generate_rapidapi_metadata(spec: dict[str, Any], config: dict[str, Any]) -> 
     """Generate RapidAPI-compatible metadata from OpenAPI spec."""
     api_info = extract_api_info(spec)
     prepare_config = config.get("prepare", {}).get("rapidapi", {})
-    
+
     return {
         "name": api_info["title"],
         "description": api_info["description"],

@@ -1,20 +1,15 @@
 """Configuration loader for kiku-dist.toml."""
 
-import sys
+import tomllib
 from pathlib import Path
 from typing import Any
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 from pydantic import BaseModel, Field
 
 
 class ContainerConfig(BaseModel):
     """Container target configuration."""
-    
+
     registry: list[str] = Field(default=["ghcr", "dockerhub"])
     dockerfile: str = "Dockerfile"
     platforms: list[str] = Field(default=["linux/amd64", "linux/arm64"])
@@ -23,7 +18,7 @@ class ContainerConfig(BaseModel):
 
 class DocsConfig(BaseModel):
     """Documentation target configuration."""
-    
+
     provider: str = "mkdocs"
     openapi_path: str = "openapi.yaml"
     deploy_to: str = "gh-pages"
@@ -31,7 +26,7 @@ class DocsConfig(BaseModel):
 
 class GHReleaseConfig(BaseModel):
     """GitHub Release target configuration."""
-    
+
     draft: bool = False
     prerelease: bool = False
     generate_notes: bool = True
@@ -39,20 +34,20 @@ class GHReleaseConfig(BaseModel):
 
 class PRDirsConfig(BaseModel):
     """PR to directories target configuration."""
-    
+
     targets: list[dict[str, str]] = Field(default_factory=list)
 
 
 class PrepareConfig(BaseModel):
     """Prepare-only targets configuration."""
-    
+
     rapidapi: dict[str, Any] = Field(default_factory=dict)
     producthunt: dict[str, Any] = Field(default_factory=dict)
 
 
 class CIConfig(BaseModel):
     """CI backend configuration."""
-    
+
     primary: str = "gha"
     repo: str = ""
     branch: str = "main"
@@ -60,18 +55,18 @@ class CIConfig(BaseModel):
 
 class Config(BaseModel):
     """Main kiku-dist configuration."""
-    
+
     name: str
     version: str = "0.0.0"
     description: str = ""
-    
+
     # Targets
     gh_release: GHReleaseConfig = Field(default_factory=GHReleaseConfig)
     container: ContainerConfig = Field(default_factory=ContainerConfig)
     docs: DocsConfig = Field(default_factory=DocsConfig)
     pr_dirs: PRDirsConfig = Field(default_factory=PRDirsConfig)
     prepare: PrepareConfig = Field(default_factory=PrepareConfig)
-    
+
     # CI
     ci: CIConfig = Field(default_factory=CIConfig)
 
@@ -79,39 +74,39 @@ class Config(BaseModel):
 def find_config_file(start_path: Path | None = None) -> Path | None:
     """Find kiku-dist.toml in current or parent directories."""
     path = start_path or Path.cwd()
-    
+
     for parent in [path, *path.parents]:
         config_file = parent / "kiku-dist.toml"
         if config_file.exists():
             return config_file
-    
+
     return None
 
 
 def load_config(config_path: Path | None = None) -> Config:
     """Load and parse kiku-dist.toml configuration.
-    
+
     Args:
         config_path: Explicit path to config file, or None to search
-        
+
     Returns:
         Parsed Config object
-        
+
     Raises:
         FileNotFoundError: If config file not found
         ValueError: If config is invalid
     """
     if config_path is None:
         config_path = find_config_file()
-    
+
     if config_path is None or not config_path.exists():
         raise FileNotFoundError(
             "kiku-dist.toml not found. Run 'kiku-dist init' to create one."
         )
-    
+
     with open(config_path, "rb") as f:
         data = tomllib.load(f)
-    
+
     return Config(**data)
 
 

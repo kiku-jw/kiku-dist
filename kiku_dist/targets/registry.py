@@ -1,16 +1,15 @@
 """Target registry - all available publish targets."""
 
-from typing import Dict, Type
 
 from kiku_dist.targets.base import Target
-from kiku_dist.targets.gh_release import GitHubReleaseTarget
 from kiku_dist.targets.container import ContainerTarget
 from kiku_dist.targets.docs import DocsTarget
+from kiku_dist.targets.gh_release import GitHubReleaseTarget
 from kiku_dist.targets.pr_dirs import PRDirsTarget
 from kiku_dist.targets.rapidapi import RapidAPITarget
 
 # Registry of all available targets
-_registry: Dict[str, Target] = {}
+_registry: dict[str, Target] = {}
 
 
 def register(target: Target) -> None:

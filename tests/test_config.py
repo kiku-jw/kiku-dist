@@ -1,11 +1,11 @@
 """Tests for config module."""
 
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import pytest
 
-from kiku_dist.config import Config, load_config, get_config_template
+from kiku_dist.config import get_config_template, load_config
 
 
 def test_get_config_template():
@@ -35,7 +35,7 @@ version = "1.0.0"
 primary = "gha"
 repo = "test/repo"
 ''')
-        
+
         config = load_config(config_path)
         assert config.name == "test-api"
         assert config.version == "1.0.0"
@@ -48,7 +48,7 @@ def test_config_defaults():
     with tempfile.TemporaryDirectory() as tmpdir:
         config_path = Path(tmpdir) / "kiku-dist.toml"
         config_path.write_text('name = "minimal"')
-        
+
         config = load_config(config_path)
         assert config.name == "minimal"
         assert config.version == "0.0.0"
