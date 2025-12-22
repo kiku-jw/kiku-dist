@@ -8,21 +8,21 @@ from kiku_dist.targets.base import Issue, IssueLevel, Step, Target, TargetResult
 
 class PRDirsTarget(Target):
     """Create PRs to awesome-lists and public API directories."""
-    
+
     name = "pr-dirs"
     aliases = ["pr", "awesome"]
     description = "Create PRs to directories and awesome-lists"
     required_secrets = ["GH_TOKEN"]
     required_tools = ["gh", "git"]
     supports_dry_run = True
-    
+
     def doctor(self, config: dict[str, Any]) -> list[Issue]:
         """Check prerequisites for PR creation."""
         issues = []
-        
+
         import os
         import shutil
-        
+
         # Check gh CLI
         if not shutil.which("gh"):
             issues.append(Issue(
@@ -30,7 +30,7 @@ class PRDirsTarget(Target):
                 message="GitHub CLI (gh) not found",
                 fix_hint="Install: brew install gh (macOS) or see https://cli.github.com",
             ))
-        
+
         # Check git
         if not shutil.which("git"):
             issues.append(Issue(
@@ -38,7 +38,7 @@ class PRDirsTarget(Target):
                 message="git not found",
                 fix_hint="Install git",
             ))
-        
+
         # Check token
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         if not token:
@@ -48,7 +48,7 @@ class PRDirsTarget(Target):
                 fix_hint="Set GH_TOKEN with repo scope",
                 ci_hints=self.get_secret_hints("GH_TOKEN"),
             ))
-        
+
         # Check pr_dirs config
         pr_config = config.get("pr_dirs", {})
         targets = pr_config.get("targets", [])
@@ -58,18 +58,18 @@ class PRDirsTarget(Target):
                 message="No PR targets configured",
                 fix_hint="Add [[pr_dirs.targets]] sections to kiku-dist.toml",
             ))
-        
+
         return issues
-    
+
     def plan(self, config: dict[str, Any]) -> list[Step]:
         """Generate PR creation steps."""
         pr_config = config.get("pr_dirs", {})
         targets = pr_config.get("targets", [])
         name = config.get("name", "unknown")
         version = config.get("version", "0.0.0")
-        
+
         steps = []
-        
+
         for target in targets:
             repo = target.get("repo", "unknown/repo")
             steps.append(Step(
@@ -88,53 +88,53 @@ class PRDirsTarget(Target):
                 command=f"gh pr create --repo {repo} --title 'Add {name}'",
                 dry_run_safe=False,
             ))
-        
+
         if not targets:
             steps.append(Step(
                 name="No targets configured",
                 description="Add [[pr_dirs.targets]] to kiku-dist.toml",
                 command=None,
             ))
-        
+
         return steps
-    
+
     def execute(self, config: dict[str, Any], dry_run: bool = False) -> TargetResult:
         """Create PRs to configured directories."""
         import subprocess
         import tempfile
-        
+
         pr_config = config.get("pr_dirs", {})
         targets = pr_config.get("targets", [])
         name = config.get("name", "unknown")
         version = config.get("version", "0.0.0")
         description = config.get("description", "")
         ci_repo = config.get("ci", {}).get("repo", "")
-        
+
         if not targets:
             return TargetResult(
                 success=True,
                 message="No PR targets configured",
             )
-        
+
         created_prs = []
         failed = []
-        
+
         for target in targets:
             repo = target.get("repo", "")
             category = target.get("category", "")
             template_path = target.get("template", "")
-            
+
             if not repo:
                 continue
-            
+
             if dry_run:
                 created_prs.append(f"Would create PR to {repo}")
                 continue
-            
+
             try:
                 with tempfile.TemporaryDirectory() as tmpdir:
                     work_dir = Path(tmpdir)
-                    
+
                     # Fork and clone
                     result = subprocess.run(
                         ["gh", "repo", "fork", repo, "--clone", "--remote"],
@@ -145,17 +145,17 @@ class PRDirsTarget(Target):
                     if result.returncode != 0:
                         failed.append(f"{repo}: fork failed")
                         continue
-                    
+
                     repo_dir = work_dir / repo.split("/")[-1]
                     branch = f"add-{name.lower().replace(' ', '-')}"
-                    
+
                     # Create branch
                     subprocess.run(
                         ["git", "checkout", "-b", branch],
                         cwd=repo_dir,
                         capture_output=True,
                     )
-                    
+
                     # Generate entry content
                     if template_path and Path(template_path).exists():
                         from jinja2 import Template
@@ -171,7 +171,7 @@ class PRDirsTarget(Target):
                         # Default markdown entry
                         url = f"https://github.com/{ci_repo}" if ci_repo else ""
                         entry = f"| [{name}]({url}) | {description} |"
-                    
+
                     # Append to README (simplified - real impl would parse structure)
                     readme = repo_dir / "README.md"
                     if readme.exists():
@@ -183,11 +183,12 @@ class PRDirsTarget(Target):
                             if next_section == -1:
                                 next_section = len(content)
                             # Insert before next section
-                            content = content[:next_section] + f"\n{entry}\n" + content[next_section:]
+                            insert = f"\n{entry}\n"
+                            content = content[:next_section] + insert + content[next_section:]
                         else:
                             content += f"\n{entry}\n"
                         readme.write_text(content)
-                    
+
                     # Commit
                     subprocess.run(
                         ["git", "add", "."],
@@ -204,14 +205,18 @@ class PRDirsTarget(Target):
                         cwd=repo_dir,
                         capture_output=True,
                     )
-                    
+
                     # Create PR
+                    pr_body = (
+                        f"Adding {name} to the list.\n\n"
+                        f"{description}\n\n---\nAutomated by kiku-dist"
+                    )
                     result = subprocess.run(
                         [
                             "gh", "pr", "create",
                             "--repo", repo,
                             "--title", f"Add {name}",
-                            "--body", f"Adding {name} to the list.\n\n{description}\n\n---\nAutomated by kiku-dist",
+                            "--body", pr_body,
                         ],
                         cwd=repo_dir,
                         capture_output=True,
@@ -221,10 +226,10 @@ class PRDirsTarget(Target):
                         created_prs.append(result.stdout.strip())
                     else:
                         failed.append(f"{repo}: {result.stderr}")
-                        
+
             except Exception as e:
                 failed.append(f"{repo}: {e}")
-        
+
         if failed:
             return TargetResult(
                 success=False,
@@ -232,7 +237,7 @@ class PRDirsTarget(Target):
                 artifacts=created_prs,
                 metadata={"failed": failed},
             )
-        
+
         return TargetResult(
             success=True,
             message=f"Created {len(created_prs)} PRs",

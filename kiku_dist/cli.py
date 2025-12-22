@@ -1,14 +1,14 @@
 """Main CLI entry point for kiku-dist."""
 
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 
 from kiku_dist import __version__
-from kiku_dist.config import Config, get_config_template, load_config
+from kiku_dist.config import get_config_template, load_config
 from kiku_dist.doctor import print_doctor_report, run_doctor
 
 app = typer.Typer(
@@ -29,7 +29,7 @@ def version_callback(value: bool) -> None:
 @app.callback()
 def main(
     version: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option("--version", "-v", callback=version_callback, is_eager=True),
     ] = None,
 ) -> None:
@@ -46,11 +46,11 @@ def init(
 ) -> None:
     """Initialize kiku-dist.toml configuration file."""
     config_path = Path.cwd() / "kiku-dist.toml"
-    
+
     if config_path.exists() and not force:
         console.print("[yellow]kiku-dist.toml already exists. Use --force to overwrite.[/yellow]")
         raise typer.Exit(1)
-    
+
     config_path.write_text(get_config_template())
     console.print(f"[green]✓ Created {config_path}[/green]")
     console.print()
@@ -67,7 +67,7 @@ def doctor(
         typer.Option("--ci", help="CI mode - exit with error on any issue"),
     ] = False,
     targets: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--targets", "-t", help="Comma-separated targets to check"),
     ] = None,
 ) -> None:
@@ -76,12 +76,12 @@ def doctor(
         config = load_config()
     except FileNotFoundError:
         config = None
-    
+
     target_list = targets.split(",") if targets else None
     result = run_doctor(config, target_list)
-    
+
     print_doctor_report(result, console)
-    
+
     if ci and result.failed > 0:
         raise typer.Exit(1)
 
@@ -103,9 +103,9 @@ def plan(
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     target_list = [t.strip() for t in targets.split(",")]
-    
+
     console.print()
     console.print(Panel(
         f"[bold]{config.name}[/bold] v{config.version}",
@@ -113,16 +113,16 @@ def plan(
         expand=False,
     ))
     console.print()
-    
+
     # Import targets and generate plan
     from kiku_dist.targets import registry
-    
+
     for target_name in target_list:
         target = registry.get(target_name)
         if target is None:
             console.print(f"[yellow]⚠ Unknown target: {target_name}[/yellow]")
             continue
-        
+
         console.print(f"[bold]{target.name}[/bold] - {target.description}")
         steps = target.plan(config.model_dump())
         for i, step in enumerate(steps, 1):
@@ -152,27 +152,27 @@ def release(
     if bump not in ("patch", "minor", "major"):
         console.print(f"[red]Invalid bump type: {bump}. Use patch, minor, or major.[/red]")
         raise typer.Exit(1)
-    
+
     try:
         config = load_config()
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     console.print(f"[bold]Releasing {config.name}[/bold]")
     console.print(f"  Current version: {config.version}")
     console.print(f"  Bump type: {bump}")
     console.print()
-    
+
     # Build release-it command
     cmd_parts = ["npx", "release-it", bump]
     if dry_run:
         cmd_parts.append("--dry-run")
     if no_git:
         cmd_parts.extend(["--no-git.tag", "--no-git.commit"])
-    
+
     cmd = " ".join(cmd_parts)
-    
+
     if dry_run:
         console.print(f"[dim]Would run: {cmd}[/dim]")
         console.print("[yellow]Dry run - no changes made[/yellow]")
@@ -201,24 +201,24 @@ def publish(
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     target_list = [t.strip() for t in targets.split(",")]
-    
+
     console.print()
     console.print(f"[bold]Publishing {config.name} v{config.version}[/bold]")
     console.print(f"  Targets: {', '.join(target_list)}")
     console.print(f"  Dry run: {dry_run}")
     console.print()
-    
+
     from kiku_dist.targets import registry
-    
+
     failed = []
     for target_name in target_list:
         target = registry.get(target_name)
         if target is None:
             console.print(f"[yellow]⚠ Unknown target: {target_name}[/yellow]")
             continue
-        
+
         console.print(f"[bold]→ {target.name}[/bold]")
         try:
             result = target.execute(config.model_dump(), dry_run=dry_run)
@@ -233,11 +233,11 @@ def publish(
             console.print(f"  [red]✗ Error: {e}[/red]")
             failed.append(target_name)
         console.print()
-    
+
     if failed:
         console.print(f"[red]Failed targets: {', '.join(failed)}[/red]")
         raise typer.Exit(1)
-    
+
     console.print("[green]✓ All targets published successfully[/green]")
 
 
@@ -249,17 +249,17 @@ def status() -> None:
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     console.print()
     console.print(f"[bold]{config.name}[/bold]")
     console.print(f"  Version: {config.version}")
     console.print(f"  CI Backend: {config.ci.primary}")
     console.print(f"  Repository: {config.ci.repo or '(not set)'}")
     console.print()
-    
+
     # Check git for pending changes
     import subprocess
-    
+
     try:
         result = subprocess.run(
             ["git", "describe", "--tags", "--abbrev=0"],
@@ -272,7 +272,7 @@ def status() -> None:
             console.print("  Last tag: (none)")
     except Exception:
         console.print("  Last tag: (git unavailable)")
-    
+
     try:
         result = subprocess.run(
             ["git", "log", "--oneline", "HEAD", "-5"],
@@ -300,11 +300,11 @@ def ci_run(
         typer.Option("--backend", "-b", help="CI backend: gha | gitlab | drone | jenkins"),
     ] = "gha",
     workflow: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--workflow", "-w", help="Workflow name to trigger"),
     ] = None,
     ref: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--ref", "-r", help="Git ref (tag/branch) to run against"),
     ] = None,
 ) -> None:
@@ -314,21 +314,21 @@ def ci_run(
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     if not config.ci.repo:
         console.print("[red]Error: ci.repo not set in kiku-dist.toml[/red]")
         raise typer.Exit(1)
-    
+
     workflow_name = workflow or "release"
     git_ref = ref or config.ci.branch
-    
-    console.print(f"[bold]Triggering CI workflow[/bold]")
+
+    console.print("[bold]Triggering CI workflow[/bold]")
     console.print(f"  Backend: {backend}")
     console.print(f"  Repo: {config.ci.repo}")
     console.print(f"  Workflow: {workflow_name}")
     console.print(f"  Ref: {git_ref}")
     console.print()
-    
+
     if backend == "gha":
         import subprocess
         cmd = [
@@ -364,12 +364,12 @@ def prepare_rapidapi(
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     console.print("[bold]Preparing RapidAPI Launch Kit[/bold]")
     console.print()
-    
+
     output.mkdir(parents=True, exist_ok=True)
-    
+
     # Generate description
     description = f"""# {config.name}
 
@@ -386,8 +386,8 @@ def prepare_rapidapi(
 See the API specification for detailed endpoint documentation.
 """
     (output / "description.md").write_text(description)
-    console.print(f"  [green]✓[/green] Created description.md")
-    
+    console.print("  [green]✓[/green] Created description.md")
+
     # Generate checklist
     checklist = f"""# RapidAPI Publication Checklist
 
@@ -411,8 +411,8 @@ See the API specification for detailed endpoint documentation.
 - [ ] Monitor usage metrics
 """
     (output / "checklist.md").write_text(checklist)
-    console.print(f"  [green]✓[/green] Created checklist.md")
-    
+    console.print("  [green]✓[/green] Created checklist.md")
+
     console.print()
     console.print(f"[green]✓ Launch kit ready:[/green] {output}")
     console.print()
@@ -433,12 +433,12 @@ def prepare_producthunt(
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
-    
+
     console.print("[bold]Preparing Product Hunt Launch Kit[/bold]")
     console.print()
-    
+
     output.mkdir(parents=True, exist_ok=True)
-    
+
     # Generate launch copy
     launch_copy = f"""# {config.name} - Product Hunt Launch
 
@@ -470,8 +470,8 @@ We'd love your feedback!
 - Artificial Intelligence
 """
     (output / "launch_copy.md").write_text(launch_copy)
-    console.print(f"  [green]✓[/green] Created launch_copy.md")
-    
+    console.print("  [green]✓[/green] Created launch_copy.md")
+
     # Generate checklist
     checklist = f"""# Product Hunt Launch Checklist
 
@@ -496,8 +496,8 @@ We'd love your feedback!
 - [ ] Thank supporters
 """
     (output / "checklist.md").write_text(checklist)
-    console.print(f"  [green]✓[/green] Created checklist.md")
-    
+    console.print("  [green]✓[/green] Created checklist.md")
+
     console.print()
     console.print(f"[green]✓ Launch kit ready:[/green] {output}")
     console.print()
@@ -516,21 +516,21 @@ def prepare_listing(
         typer.Option("--output", "-o", help="Output directory"),
     ] = Path("./dist/listing"),
     openapi: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--openapi", help="OpenAPI file path (auto-detect if not set)"),
     ] = None,
 ) -> None:
     """Generate marketplace listing from OpenAPI spec and docs."""
     from kiku_dist.prepare_listing import generate_listing, save_listing
-    
+
     console.print("[bold]Generating Marketplace Listing[/bold]")
     console.print()
-    
+
     product_dir = Path(product_dir).resolve()
     if not product_dir.exists():
         console.print(f"[red]Error: Directory not found: {product_dir}[/red]")
         raise typer.Exit(1)
-    
+
     # Find OpenAPI spec
     openapi_path = None
     if openapi:
@@ -541,13 +541,13 @@ def prepare_listing(
             if candidate.exists():
                 openapi_path = candidate
                 break
-    
+
     if not openapi_path or not openapi_path.exists():
         console.print("[red]Error: OpenAPI spec not found. Use --openapi to specify.[/red]")
         raise typer.Exit(1)
-    
+
     console.print(f"  OpenAPI: {openapi_path}")
-    
+
     # Find README
     readme_path = None
     for filename in ["README.md", "readme.md", "Readme.md"]:
@@ -555,16 +555,16 @@ def prepare_listing(
         if candidate.exists():
             readme_path = candidate
             break
-    
+
     if readme_path:
         console.print(f"  README: {readme_path}")
-    
+
     console.print()
-    
+
     try:
         listing = generate_listing(openapi_path, readme_path)
         files = save_listing(listing, Path(output))
-        
+
         console.print("[green]✓ Generated listing files:[/green]")
         for f in files:
             console.print(f"  → {f}")
@@ -574,7 +574,7 @@ def prepare_listing(
         console.print(f"  Endpoints: {len(listing['endpoints'])}")
         console.print(f"  Tags: {', '.join(listing['tags'][:5])}")
         console.print(f"  Category: {listing['category']}")
-        
+
     except Exception as e:
         console.print(f"[red]Error generating listing: {e}[/red]")
         raise typer.Exit(1)

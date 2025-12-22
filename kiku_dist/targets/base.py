@@ -8,7 +8,7 @@ from typing import Any
 
 class IssueLevel(str, Enum):
     """Severity level for doctor issues."""
-    
+
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
@@ -17,7 +17,7 @@ class IssueLevel(str, Enum):
 @dataclass
 class Issue:
     """An issue found during doctor check."""
-    
+
     level: IssueLevel
     message: str
     fix_hint: str | None = None
@@ -27,7 +27,7 @@ class Issue:
 @dataclass
 class Step:
     """A planned execution step."""
-    
+
     name: str
     description: str
     command: str | None = None
@@ -37,7 +37,7 @@ class Step:
 @dataclass
 class TargetResult:
     """Result of target execution."""
-    
+
     success: bool
     message: str
     artifacts: list[str] = field(default_factory=list)
@@ -46,42 +46,42 @@ class TargetResult:
 
 class Target(ABC):
     """Base class for all publish targets."""
-    
+
     name: str
     description: str
     required_secrets: list[str] = []
     required_tools: list[str] = []
     supports_dry_run: bool = True
-    
+
     @abstractmethod
     def doctor(self, config: dict[str, Any]) -> list[Issue]:
         """Check prerequisites for this target.
-        
+
         Returns list of issues found (empty = all good).
         """
         ...
-    
+
     @abstractmethod
     def plan(self, config: dict[str, Any]) -> list[Step]:
         """Generate execution plan for this target.
-        
+
         Returns list of steps that will be executed.
         """
         ...
-    
+
     @abstractmethod
     def execute(self, config: dict[str, Any], dry_run: bool = False) -> TargetResult:
         """Execute the target publish.
-        
+
         Args:
             config: Parsed kiku-dist.toml configuration
             dry_run: If True, simulate without actual publish
-            
+
         Returns:
             TargetResult with success status and details
         """
         ...
-    
+
     def get_secret_hints(self, secret_name: str) -> dict[str, str]:
         """Get CI-specific hints for setting up a secret."""
         return {

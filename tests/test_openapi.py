@@ -1,11 +1,9 @@
 """Tests for OpenAPI validation module."""
 
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-import pytest
-
-from kiku_dist.openapi import load_openapi, validate_openapi, extract_api_info
+from kiku_dist.openapi import extract_api_info, load_openapi, validate_openapi
 
 
 def test_validate_openapi_valid():
@@ -58,7 +56,7 @@ def test_extract_api_info():
         },
         "servers": [{"url": "https://api.example.com"}],
     }
-    
+
     info = extract_api_info(spec)
     assert info["title"] == "My API"
     assert info["version"] == "2.0.0"
