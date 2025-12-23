@@ -54,22 +54,21 @@ def extract_api_info(spec: dict[str, Any]) -> dict[str, Any]:
     info = spec.get("info", {})
     paths = spec.get("paths", {})
 
-    # Count endpoints
+    # Count endpoints and extract tags
     endpoint_count = 0
     methods = set()
+    tags = set()
+    valid_methods = {"get", "post", "put", "patch", "delete", "options", "head"}
+
     for path, operations in paths.items():
-        for method in operations:
-            if method in ("get", "post", "put", "patch", "delete", "options", "head"):
+        for method, details in operations.items():
+            if method in valid_methods:
                 endpoint_count += 1
                 methods.add(method.upper())
 
-    # Extract tags
-    tags = set()
-    for path, operations in paths.items():
-        for method, details in operations.items():
-            if isinstance(details, dict):
-                for tag in details.get("tags", []):
-                    tags.add(tag)
+                if isinstance(details, dict):
+                    for tag in details.get("tags", []):
+                        tags.add(tag)
 
     return {
         "title": info.get("title", "Unknown API"),
