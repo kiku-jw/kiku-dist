@@ -75,6 +75,6 @@ jobs:
             Version: ${{ steps.version.outputs.version }}
             
             ---
-            Created by [kiku-dist](https://github.com/kikuai/kiku-dist)
+            Created by [kiku-dist](https://github.com/kiku-jw/kiku-dist)
           branch: ${{ matrix.directory.branch }}
           delete-branch: true

@@ -6,7 +6,7 @@ First off, thank you for considering contributing to KikuAI Distributor! It's pe
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/kikuai/kiku-dist.git
+   git clone https://github.com/kiku-jw/kiku-dist.git
    cd kiku-dist
    ```
 

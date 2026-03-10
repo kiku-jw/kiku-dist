@@ -16,5 +16,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python-based OpenAPI validation and metadata extraction.
 - CI Runner for programmatic workflow triggering.
 
-[Unreleased]: https://github.com/kikuai/kiku-dist/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/kikuai/kiku-dist/releases/tag/v0.1.0
+[Unreleased]: https://github.com/kiku-jw/kiku-dist/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/kiku-jw/kiku-dist/releases/tag/v0.1.0
