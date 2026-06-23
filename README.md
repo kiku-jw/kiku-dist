@@ -3,7 +3,6 @@
 [![Version](https://img.shields.io/badge/version-0.1.0-black?style=for-the-badge)](https://github.com/kiku-jw/kiku-dist)
 [![Python](https://img.shields.io/badge/python-3.11+-black?style=for-the-badge&logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-black?style=for-the-badge)](LICENSE)
-[![GitHub Actions](https://img.shields.io/badge/CI-Success-black?style=for-the-badge&logo=github-actions)](.github/workflows)
 
 > Maintenance mode: kept public as a reusable release-automation reference, but not under active product development.
 
