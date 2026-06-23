@@ -88,7 +88,7 @@ kiku-dist publish --targets gh,container,docs
 
 ## ☁️ CI Integration
 
-Distributor comes with production-ready templates for the following backends:
+Distributor comes with ready-to-adapt CI templates for the following backends:
 
 - [GitHub Actions](ci_templates/gha/)
 - [GitLab CI](ci_templates/gitlab-ci.yml)
