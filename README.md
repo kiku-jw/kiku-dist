@@ -9,6 +9,17 @@
 
 **CLI-first, CI-agnostic release automation for KikuAI API products.**
 
+**[Run a local release preview](#-quick-start)**
+
+[Docs](#-key-principles) · [Examples](#-quick-start) · Status: maintenance-mode reference
+
+Sample output:
+
+```text
+doctor: ok
+plan: gh,container,docs targets ready for review
+```
+
 KikuAI Distributor (`kiku-dist`) is a specialized tool designed to orchestrate the entire release cycle of API products—from version bumping and container building to documentation deployment and marketplace preparation. It is built to be **CI-agnostic**, keeping your release logic in your codebase, not hidden in CI yaml files.
 
 ---
