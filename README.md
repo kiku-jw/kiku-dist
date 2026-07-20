@@ -4,13 +4,14 @@
 [![Python](https://img.shields.io/badge/python-3.11+-black?style=for-the-badge&logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-black?style=for-the-badge)](LICENSE)
 
-> Maintenance mode: kept public as a reusable release-automation reference, but not under active product development.
+`kiku-dist` is a reusable release-automation toolkit with issue-driven
+maintenance and a complete local preview workflow.
 
 **CLI-first, CI-agnostic release automation for KikuAI API products.**
 
 **[Run a local release preview](#-quick-start)**
 
-[Docs](#-key-principles) · [Examples](#-quick-start) · Status: maintenance-mode reference
+[Docs](#-key-principles) · [Examples](#-quick-start)
 
 Sample output:
 
