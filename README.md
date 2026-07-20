@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-black?style=for-the-badge)](LICENSE)
 
 `kiku-dist` is a reusable release-automation toolkit with issue-driven
-maintenance and a complete local preview workflow.
+maintenance and a local preview workflow.
 
 **CLI-first, CI-agnostic release automation for KikuAI API products.**
 
